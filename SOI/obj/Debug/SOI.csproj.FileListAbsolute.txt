@@ -1,0 +1,14 @@
+P:\Repos\SOI\SOI\bin\Debug\SOI.exe.config
+P:\Repos\SOI\SOI\bin\Debug\SOI.exe
+P:\Repos\SOI\SOI\bin\Debug\SOI.pdb
+P:\Repos\SOI\SOI\obj\Debug\SOI.csproj.AssemblyReference.cache
+P:\Repos\SOI\SOI\obj\Debug\SOI.Properties.Resources.resources
+P:\Repos\SOI\SOI\obj\Debug\SOI.csproj.GenerateResource.cache
+P:\Repos\SOI\SOI\obj\Debug\SOI.csproj.CoreCompileInputs.cache
+P:\Repos\SOI\SOI\obj\Debug\SOI.exe
+P:\Repos\SOI\SOI\obj\Debug\SOI.pdb
+P:\Repos\SOI\SOI\obj\Debug\SOI.MainForm.resources
+P:\Repos\SOI\SOI\obj\Debug\SOI.AddForm.resources
+P:\Repos\SOI\SOI\bin\Debug\Newtonsoft.Json.dll
+P:\Repos\SOI\SOI\bin\Debug\Newtonsoft.Json.xml
+P:\Repos\SOI\SOI\obj\Debug\SOI.csproj.Up2Date
