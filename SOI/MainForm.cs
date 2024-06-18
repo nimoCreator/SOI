@@ -5,13 +5,17 @@ using System.Windows.Forms;
 namespace SOI
 {
 
+
     public partial class MainForm : Form
     {
         Points points;
 
+        Model model = new Model();
+
         public MainForm()
         {
             InitializeComponent();
+
 
             // Initialize points with an array of 4 elements
             points = new Points(4);
@@ -23,7 +27,7 @@ namespace SOI
 
         private void buttonTrainClick(object sender, EventArgs e)
         {
-            // train ai
+            Form trainForm = new trainForm(model);
         }
 
         private void buttonAddImageClick(object sender, EventArgs e)
@@ -73,30 +77,7 @@ namespace SOI
 
         private Points AI(Bitmap inputImage)
         {
-            Points result = new Points(4);
-
-            Random rand = new Random();
-            int a = Math.Max(1, rand.Next(Math.Min(inputImage.Width, inputImage.Height)));
-            int x = rand.Next(inputImage.Width - a);
-            int y = rand.Next(inputImage.Height - a);
-
-            result.a = a;
-            result.c.x = x + a / 2;
-            result.c.y = y + a / 2;
-
-            result.points[0].x = x;
-            result.points[0].y = y;
-
-            result.points[1].x = x + a;
-            result.points[1].y = y;
-
-            result.points[2].x = x;
-            result.points[2].y = y + a;
-
-            result.points[3].x = x + a;
-            result.points[3].y = y + a;
-
-            return result;
+            return model.Use(inputImage);
         }
 
         private void ProcessImage(Bitmap inputImage)

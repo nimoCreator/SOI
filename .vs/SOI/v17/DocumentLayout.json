@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "P:\\Repos\\SOI\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\extraclasses.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|P:\\Repos\\SOI\\soi\\extraclasses.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\extraclasses.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\trainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\trainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\trainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\trainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -21,6 +21,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|P:\\Repos\\SOI\\soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|p:\\repos\\soi\\soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D5EF0D4F-812C-4E99-A45C-B661B55A569D}|SOI\\SOI.csproj|solutionrelative:soi\\addform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 90,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -47,40 +51,53 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "trainForm.cs [Design]",
+              "DocumentMoniker": "P:\\Repos\\SOI\\SOI\\trainForm.cs",
+              "RelativeDocumentMoniker": "SOI\\trainForm.cs",
+              "ToolTip": "P:\\Repos\\SOI\\SOI\\trainForm.cs [Design]",
+              "RelativeToolTip": "SOI\\trainForm.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-16T17:44:07.034Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "trainForm.cs",
+              "DocumentMoniker": "P:\\Repos\\SOI\\SOI\\trainForm.cs",
+              "RelativeDocumentMoniker": "SOI\\trainForm.cs",
+              "ToolTip": "P:\\Repos\\SOI\\SOI\\trainForm.cs",
+              "RelativeToolTip": "SOI\\trainForm.cs",
+              "ViewState": "AQIAAAwAAAAAAAAAAAAqwCEAAAAoAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-16T17:44:09.688Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "ExtraClasses.cs",
               "DocumentMoniker": "P:\\Repos\\SOI\\SOI\\ExtraClasses.cs",
               "RelativeDocumentMoniker": "SOI\\ExtraClasses.cs",
               "ToolTip": "P:\\Repos\\SOI\\SOI\\ExtraClasses.cs",
               "RelativeToolTip": "SOI\\ExtraClasses.cs",
-              "ViewState": "AQIAAB4AAAAAAAAAAAAowDQAAAAAAAAA",
+              "ViewState": "AQIAAGgAAAAAAAAAAAAiwHQAAAAFAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-06-15T17:32:53.102Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 5,
               "Title": "AddForm.cs",
               "DocumentMoniker": "P:\\Repos\\SOI\\SOI\\AddForm.cs",
               "RelativeDocumentMoniker": "SOI\\AddForm.cs",
               "ToolTip": "P:\\Repos\\SOI\\SOI\\AddForm.cs",
               "RelativeToolTip": "SOI\\AddForm.cs",
-              "ViewState": "AQIAAAwBAAAAAAAAAAAIwCoBAAA/AAAA",
+              "ViewState": "AQIAAIMAAAAAAAAAAAAAwBEBAACBAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-06-13T18:40:20.991Z",
+              "WhenOpened": "2024-06-16T18:05:14.211Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "MainForm.cs [Design]",
-              "DocumentMoniker": "P:\\Repos\\SOI\\SOI\\MainForm.cs",
-              "RelativeDocumentMoniker": "SOI\\MainForm.cs",
-              "ToolTip": "P:\\Repos\\SOI\\SOI\\MainForm.cs [Design]",
-              "RelativeToolTip": "SOI\\MainForm.cs [Design]",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-06-15T15:40:23.541Z",
-              "EditorCaption": " [Design]"
             },
             {
               "$type": "Document",
@@ -90,9 +107,9 @@
               "RelativeDocumentMoniker": "SOI\\MainForm.cs",
               "ToolTip": "P:\\Repos\\SOI\\SOI\\MainForm.cs",
               "RelativeToolTip": "SOI\\MainForm.cs",
-              "ViewState": "AQIAAEUAAAAAAAAAAAAmwFoAAAAjAAAA",
+              "ViewState": "AQIAAAgAAAAAAAAAAAA2wB0AAAAyAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-06-15T15:40:37.353Z",
+              "WhenOpened": "2024-06-16T18:01:25.169Z",
               "EditorCaption": ""
             },
             {
