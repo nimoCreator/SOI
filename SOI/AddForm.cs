@@ -14,12 +14,12 @@ namespace SOI
 {
     public partial class AddForm : Form
     {
-        bool isImageFromApi = false;
+        private int imagesCount = 0;
 
         private bool isDrawing = false;
 
-        private Point startPoint;
-        private Point endPoint;
+        private CustomPoint startPoint;
+        private CustomPoint endPoint;
 
         private Points points;
 
@@ -36,6 +36,10 @@ namespace SOI
         {
             if (inputImageBox.Image != null)
                 originalImage = new Bitmap(inputImageBox.Image);
+
+            imagesCount = jsonLength();
+            resetPoints();
+            updatePointUI();
         }
 
         private void clickInputImage(object sender, EventArgs e)
@@ -51,24 +55,22 @@ namespace SOI
                     tempImage = (Bitmap)originalImage.Clone();
 
                     OpenTheImage(originalImage);
-                    isImageFromApi = false;
                 }
             }
         }
 
         private void OpenTheImage(Bitmap input)
         {
-            startPoint = new Point(0, 0);
-            endPoint = new Point(input.Width, input.Height);
+            resetPoints();
             updatePointUI();
 
             outputH.Text = input.Height.ToString() + "px";
             outputW.Text = input.Width.ToString() + "px";
         }
 
-        private Point setPoint(int x, int y)
+        private CustomPoint setPoint(int x, int y)
         {
-            if (inputImageBox.Image == null) return new Point(0, 0);
+            if (inputImageBox.Image == null) return new CustomPoint(0, 0);
 
             float imageAspect = (float)originalImage.Width / originalImage.Height;
             float boxAspect = (float)inputImageBox.ClientSize.Width / inputImageBox.ClientSize.Height;
@@ -93,7 +95,7 @@ namespace SOI
 
 
 
-            return new Point(
+            return new CustomPoint(
                 Math.Max(0, Math.Min(translatedX, originalImage.Width)), 
                 Math.Max(0, Math.Min(translatedY, originalImage.Height)));
         }
@@ -156,6 +158,13 @@ namespace SOI
             }
         }
 
+        private void resetPoints()
+        {
+            startPoint = new CustomPoint(0, 0);
+            endPoint = new CustomPoint(originalImage.Width, originalImage.Height);
+            updatePointUI();
+        }
+
         private void updatePointUI()
         {
             points.a = Math.Min(Math.Abs(startPoint.x - endPoint.x), Math.Abs(startPoint.y - endPoint.y));
@@ -185,6 +194,25 @@ namespace SOI
             outputY3.Text = points.points[2].y.ToString() + "px";
             outputX4.Text = points.points[3].x.ToString() + "px";
             outputY4.Text = points.points[3].y.ToString() + "px";
+
+            outputImgCount.Text = imagesCount.ToString();
+        }
+
+        private int jsonLength()
+        {
+            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SoI");
+            string metadataFileName = "data.json";
+            string metadataPath = Path.Combine(directoryPath, metadataFileName);
+
+            if (File.Exists(metadataPath))
+            {
+                string json = File.ReadAllText(metadataPath);
+                List<ImageMetadata> metadataList = JsonConvert.DeserializeObject<List<ImageMetadata>>(json);
+
+                return metadataList.Count;
+            }
+
+            return 0;
         }
 
         private void drawRectangle()
@@ -197,6 +225,8 @@ namespace SOI
 
             using (Graphics g = Graphics.FromImage(tempImage))
             {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+
                 g.DrawImage(originalImage, 0, 0);
                 try
                 {
@@ -227,6 +257,8 @@ namespace SOI
 
             using (Graphics g = Graphics.FromImage(tempImage))
             {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+
                 g.DrawImage(originalImage, 0, 0);
                 try
                 {
@@ -290,6 +322,8 @@ namespace SOI
 
                     using (Graphics g = Graphics.FromImage(tempImage))
                     {
+                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+
                         g.DrawImage(originalImage, 0, 0);
                     }
 
@@ -304,7 +338,7 @@ namespace SOI
                         FileName = imageFileName,
                         W = originalImage.Width,
                         H = originalImage.Height,
-                        c = new Point(points.c),
+                        c = new CustomPoint(points.c),
                         a = points.a
                     };
 
@@ -326,6 +360,9 @@ namespace SOI
 
                     string updatedJson = JsonConvert.SerializeObject(metadataList, Formatting.Indented);
                     File.WriteAllText(metadataPath, updatedJson);
+
+                    imagesCount++;
+                    resetPoints();
 
                     MessageBox.Show($"[i][E001] Image and metadata saved successfully at:\n{imagePath}\n{metadataPath}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -366,7 +403,6 @@ namespace SOI
                         
 
                         OpenTheImage(originalImage);
-                        isImageFromApi = true; // Set flag indicating image is from API
                     }
                 }
             }

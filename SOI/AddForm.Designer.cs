@@ -463,7 +463,7 @@
             this.Controls.Add(this.tableLayoutPanel1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "AddForm";
-            this.Text = "AddForm";
+            this.Text = "Add Image | SOI";
             this.Load += new System.EventHandler(this.AddForm_Load);
             this.tableLayoutPanel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.inputImageBox)).EndInit();
