@@ -71,6 +71,8 @@
             this.outputW = new System.Windows.Forms.Label();
             this.outputV = new System.Windows.Forms.Label();
             this.outputImgCount = new System.Windows.Forms.Label();
+            this.labelTrainingTime = new System.Windows.Forms.Label();
+            this.outputTrainingTime = new System.Windows.Forms.Label();
             this.inputImageBox = new System.Windows.Forms.PictureBox();
             this.tableOutsideWrapper.SuspendLayout();
             this.tableMain.SuspendLayout();
@@ -189,7 +191,7 @@
             this.labelV.Name = "labelV";
             this.labelV.Size = new System.Drawing.Size(112, 29);
             this.labelV.TabIndex = 18;
-            this.labelV.Text = "Version:";
+            this.labelV.Text = "Model Version:";
             this.labelV.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // buttonTrain
@@ -549,12 +551,14 @@
             this.tableControlsLeft.Controls.Add(this.outputW, 1, 0);
             this.tableControlsLeft.Controls.Add(this.buttonTrain, 0, 3);
             this.tableControlsLeft.Controls.Add(this.labelH, 2, 0);
-            this.tableControlsLeft.Controls.Add(this.labelImgCount, 2, 2);
             this.tableControlsLeft.Controls.Add(this.labelW, 0, 0);
             this.tableControlsLeft.Controls.Add(this.labelV, 0, 2);
-            this.tableControlsLeft.Controls.Add(this.buttonAddImage, 2, 3);
             this.tableControlsLeft.Controls.Add(this.outputV, 1, 2);
             this.tableControlsLeft.Controls.Add(this.outputImgCount, 3, 2);
+            this.tableControlsLeft.Controls.Add(this.buttonAddImage, 2, 3);
+            this.tableControlsLeft.Controls.Add(this.labelTrainingTime, 2, 1);
+            this.tableControlsLeft.Controls.Add(this.outputTrainingTime, 3, 1);
+            this.tableControlsLeft.Controls.Add(this.labelImgCount, 2, 2);
             this.tableControlsLeft.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableControlsLeft.Location = new System.Drawing.Point(3, 424);
             this.tableControlsLeft.Name = "tableControlsLeft";
@@ -563,45 +567,70 @@
             this.tableControlsLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.tableControlsLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.tableControlsLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.tableControlsLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableControlsLeft.Size = new System.Drawing.Size(475, 118);
             this.tableControlsLeft.TabIndex = 26;
+            this.tableControlsLeft.Enter += new System.EventHandler(this.updateUI);
             // 
             // outputH
             // 
+            this.outputH.Dock = System.Windows.Forms.DockStyle.Fill;
             this.outputH.Location = new System.Drawing.Point(357, 0);
             this.outputH.Name = "outputH";
-            this.outputH.Size = new System.Drawing.Size(101, 25);
+            this.outputH.Size = new System.Drawing.Size(115, 29);
             this.outputH.TabIndex = 22;
             this.outputH.Text = "0px";
             this.outputH.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // outputW
             // 
+            this.outputW.Dock = System.Windows.Forms.DockStyle.Fill;
             this.outputW.Location = new System.Drawing.Point(121, 0);
             this.outputW.Name = "outputW";
-            this.outputW.Size = new System.Drawing.Size(101, 25);
+            this.outputW.Size = new System.Drawing.Size(112, 29);
             this.outputW.TabIndex = 21;
             this.outputW.Text = "0px";
             this.outputW.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // outputV
             // 
+            this.outputV.Dock = System.Windows.Forms.DockStyle.Fill;
             this.outputV.Location = new System.Drawing.Point(121, 58);
             this.outputV.Name = "outputV";
-            this.outputV.Size = new System.Drawing.Size(101, 25);
+            this.outputV.Size = new System.Drawing.Size(112, 29);
             this.outputV.TabIndex = 23;
             this.outputV.Text = "v.0001";
             this.outputV.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // outputImgCount
             // 
+            this.outputImgCount.Dock = System.Windows.Forms.DockStyle.Fill;
             this.outputImgCount.Location = new System.Drawing.Point(357, 58);
             this.outputImgCount.Name = "outputImgCount";
-            this.outputImgCount.Size = new System.Drawing.Size(101, 25);
+            this.outputImgCount.Size = new System.Drawing.Size(115, 29);
             this.outputImgCount.TabIndex = 24;
             this.outputImgCount.Text = "0";
             this.outputImgCount.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // labelTrainingTime
+            // 
+            this.labelTrainingTime.AutoSize = true;
+            this.labelTrainingTime.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.labelTrainingTime.Location = new System.Drawing.Point(239, 29);
+            this.labelTrainingTime.Name = "labelTrainingTime";
+            this.labelTrainingTime.Size = new System.Drawing.Size(112, 29);
+            this.labelTrainingTime.TabIndex = 25;
+            this.labelTrainingTime.Text = "Height:";
+            this.labelTrainingTime.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // outputTrainingTime
+            // 
+            this.outputTrainingTime.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.outputTrainingTime.Location = new System.Drawing.Point(357, 29);
+            this.outputTrainingTime.Name = "outputTrainingTime";
+            this.outputTrainingTime.Size = new System.Drawing.Size(115, 29);
+            this.outputTrainingTime.TabIndex = 26;
+            this.outputTrainingTime.Text = "0s";
+            this.outputTrainingTime.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // inputImageBox
             // 
@@ -628,7 +657,14 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.Text = "Square of Interest";
+            this.Activated += new System.EventHandler(this.updateUI);
             this.Load += new System.EventHandler(this.MainFormLoad);
+            this.Click += new System.EventHandler(this.updateUI);
+            this.Enter += new System.EventHandler(this.updateUI);
+            this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.updateUI);
+            this.MouseEnter += new System.EventHandler(this.updateUI);
+            this.MouseHover += new System.EventHandler(this.updateUI);
+            this.Validated += new System.EventHandler(this.updateUI);
             this.tableOutsideWrapper.ResumeLayout(false);
             this.tableOutsideWrapper.PerformLayout();
             this.tableMain.ResumeLayout(false);
@@ -639,6 +675,7 @@
             this.tableControlsRightPoints.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.outputImageBox)).EndInit();
             this.tableControlsLeft.ResumeLayout(false);
+            this.tableControlsLeft.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.inputImageBox)).EndInit();
             this.ResumeLayout(false);
 
@@ -718,6 +755,8 @@
 
         private System.Windows.Forms.TextBox consoleTextBox;
         private System.Windows.Forms.Button buttonShowPixelImportancy;
+        private System.Windows.Forms.Label labelTrainingTime;
+        private System.Windows.Forms.Label outputTrainingTime;
     }
 }
 

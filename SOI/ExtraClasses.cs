@@ -3,15 +3,40 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
+using System.Security.Cryptography;
+using SOI;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace SOI
 {
+    public class CryptoRandom
+    {
+        static public double GetMoreRandomDouble()
+        {
+            var bytes = new byte[8];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(bytes);
+            }
+            ulong value = BitConverter.ToUInt64(bytes, 0);
+            return (double)value / ulong.MaxValue;
+        }
+    }
+
     public static class Constants
     {
         public const int FrameSize = 16; // <===================================================== TUTAJ
-        public const int LayerCount = 1; // <===================================================== TUTAJ
+                                    // f
+
+        public static readonly int[] LayerSizes = { 768, 640, 512, 384, 256 }; // <===================================================== TUTAJ
+                                                // 3 * f^3, 2.5*f^2, 2*f^2, 1.5*f^2, f^2
+                                                
+        public const int RGBA = 3;
     }
 
     public struct CustomPoint
@@ -71,6 +96,8 @@ namespace SOI
         public int H { get; set; }
         public CustomPoint c { get; set; }
         public int a { get; set; }
+
+        public double ErrorRate { get; set; }
     }
 
     public class Neuron
@@ -85,10 +112,10 @@ namespace SOI
 
         private void InitializeWeights()
         {
-            Random rand = new Random();
             for (int i = 0; i < Weights.Length; i++)
             {
-                Weights[i] = rand.NextDouble();
+                Weights[i] = CryptoRandom.GetMoreRandomDouble();
+                // Weights[i] = 0;
             }
         }
 
@@ -129,6 +156,8 @@ namespace SOI
     {
         public Neuron[] Neurons { get; set; }
 
+        public int inputSize;
+
         public Layer(int numNeurons, int inputSize)
         {
             Neurons = new Neuron[numNeurons];
@@ -136,6 +165,7 @@ namespace SOI
             {
                 Neurons[i] = new Neuron(inputSize);
             }
+            this.inputSize = inputSize;
         }
 
         public double[] Activate(double[] inputs, Action<string> addConsoleText)
@@ -159,6 +189,13 @@ namespace SOI
             }
             return output;
         }
+    }
+
+    public class ModelData
+    {
+        public Layer[] Layers { get; set; }
+        public int Version { get; set; }
+        public double TotalTrainingTime { get; set; }
     }
 
     public class Kolorek
@@ -217,45 +254,78 @@ namespace SOI
 
     public class Model
     {
-        private string FilePath = "";
+        private string FilePath;
         private string DataFilePath => Path.Combine(FilePath, "data.json");
         private string ModelFilePath => Path.Combine(FilePath, "model.json");
+        private string CSVFilePath => Path.Combine(FilePath, "errorRates.csv");
 
-        public int version = 1;
+        public int Version { get; private set; } = 1;
+        public double TotalTrainingTime { get; private set; } = 0.0;
+        public TimeSpan TrainingTime { get; set; } = TimeSpan.Zero;
 
-        public Layer[] Layers { get; set; }
-        public List<ImageMetadata> ImageData { get; set; } = new List<ImageMetadata>();
+        public Layer[] Layers { get; private set; }
+        public List<ImageMetadata> ImageData { get; private set; } = new List<ImageMetadata>();
 
-        public double previousErrorRate = 1.0;
-        public double errorRate = 1.0;
+        public double PreviousAvgErrorRate { get; private set; } = 1.0;
+        public double AvgErrorRate { get; private set; } = 1.0;
 
-        public double LearningRate = 0.15;
-        public double MutationRate = 0.15;
+        public double LearningRate { get; set; } = 0.15;
+        public double MutationRate { get; set; } = 0.15;
 
         public Model()
         {
             FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SoI");
             LoadModel();
             LoadImageData();
+            CalcAvgErrorRate(null);
         }
-
         public void LoadModel()
         {
-            if (File.Exists(ModelFilePath))
+            try
             {
-                string json = File.ReadAllText(ModelFilePath);
-                Layers = JsonConvert.DeserializeObject<Layer[]>(json);
-            }
-            else
-            {
-                Layers = new Layer[Constants.LayerCount];
-                Layers[0] = new Layer(Constants.FrameSize, Constants.FrameSize * 4);
-                for (int i = 1; i < Constants.LayerCount; i++)
+                if (File.Exists(ModelFilePath))
                 {
-                    Layers[i] = new Layer(Constants.FrameSize, Constants.FrameSize);
-                }
+                    string json = File.ReadAllText(ModelFilePath);
+                    var modelData = JsonConvert.DeserializeObject<ModelData>(json);
 
+                    Layers = modelData.Layers ?? throw new InvalidOperationException("Layers cannot be null.");
+                    if(Layers.Length != Constants.LayerSizes.Length)
+                    {
+                        throw new InvalidOperationException("Invalid layer count.");
+                    }
+                    if(Layers[0].Neurons.Length != Constants.LayerSizes[0] || Layers[0].inputSize != Constants.LayerSizes[0])
+                    {
+                        throw new InvalidOperationException("Invalid input size.");
+                    }
+                    for(int i = 1; i < Layers.Length; i++)
+                    {
+                        if(Layers[i].Neurons.Length != Constants.LayerSizes[i] || Layers[i].inputSize != Constants.LayerSizes[i-1])
+                        {
+                            throw new InvalidOperationException("Invalid layer size.");
+                        }
+                    }
+
+                    Version = modelData.Version;
+                    TotalTrainingTime = modelData.TotalTrainingTime;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Model file not found.");
+                }
+            }
+            catch
+            {
+                InitializeLayers();
                 SaveModel();
+            }
+        }
+        private void InitializeLayers()
+        {
+            Layers = new Layer[Constants.LayerSizes.Length];
+            Layers[0] = new Layer(Constants.LayerSizes[0], Constants.LayerSizes[0]);
+            for (int i = 1; i < Constants.LayerSizes.Length; i++)
+            {
+                Layers[i] = new Layer(Constants.LayerSizes[i], Constants.LayerSizes[i-1]);
             }
         }
 
@@ -263,14 +333,28 @@ namespace SOI
         {
             if (File.Exists(DataFilePath))
             {
-                string json = File.ReadAllText(DataFilePath);
-                ImageData = JsonConvert.DeserializeObject<List<ImageMetadata>>(json);
+                try
+                {
+                    string json = File.ReadAllText(DataFilePath);
+                    ImageData = JsonConvert.DeserializeObject<List<ImageMetadata>>(json);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading image data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
         public void SaveModel()
         {
-            string json = JsonConvert.SerializeObject(Layers);
+            var modelData = new ModelData
+            {
+                Version = Version,
+                TotalTrainingTime = TotalTrainingTime,
+                Layers = Layers,
+            };
+
+            string json = JsonConvert.SerializeObject(modelData, Formatting.Indented);
             if (!Directory.Exists(FilePath))
             {
                 Directory.CreateDirectory(FilePath);
@@ -278,67 +362,107 @@ namespace SOI
             File.WriteAllText(ModelFilePath, json);
         }
 
-        public void Train(int epochCount, double mutationFactor, double learningFactor, Action<string> addConsoleText)
+        public void Train( double mutationFactor, double learningFactor, Action<string> addConsoleText)
         {
+
+/*            for(int i = 0; i < 10; i++)
+            {
+                addConsoleText(CryptoRandom.GetMoreRandomDouble().ToString());
+            }
+*/
             LoadImageData();
 
             LearningRate = learningFactor;
             MutationRate = mutationFactor;
 
-            for (int g = 0; g < Layers.Length; g++)
+/*            for (int g = 0; g < Layers.Length; g++)
             {
-                addConsoleText($"Layer {g}, Size {Layers[g].Neurons.Length}, Input Size {Layers[g].Neurons[g].Weights.Length}");
+                addConsoleText($"Layer {g + 1}, Size {Layers[g].Neurons.Length}, Input Size {Layers[g].Neurons[0].Weights.Length}");
+            }*/
+
+            var startTime = DateTime.Now;
+            //addConsoleText($"Starting ErrorRate: {AvgErrorRate}");
+
+            // etap 1 evolve
+
+            CalcAvgErrorRate(addConsoleText);
+
+
+            foreach (var layer in Layers)
+            {
+                Parallel.ForEach(layer.Neurons, neuron =>
+                {
+                    for (int k = 0; k < neuron.Weights.Length; k++)
+                    {
+                        if (CryptoRandom.GetMoreRandomDouble() < MutationRate)
+                        {
+                            // neuron.Weights[k] += (rand.NextDouble() * 2 - 1) * LearningRate;
+                            neuron.Weights[k] += (CryptoRandom.GetMoreRandomDouble()*2 - 1) * LearningRate;
+                        }
+                    }
+                });
             }
 
-            int i = 1;
-            int total = ImageData.Count;
+            // 3 jak jest po evolucji
+
+            double newAvgErrorRate = 0.0;
+
             foreach (var imageData in ImageData)
             {
-                addConsoleText($"START Image: {i++} / {total} : {imageData.FileName}");
 
-                double[] inputimage = PreprocessImage(LoadImage(imageData.FileName));
-                double[] expectedoutput = CalculateExpectedOutputs(imageData, addConsoleText);
+                double[] inputImage = PreprocessImage(LoadImage(imageData.FileName));
+                double[] expectedOutput = CalculateExpectedOutputs(imageData, addConsoleText);
 
-                Evolve(
-                    inputimage,
-                    expectedoutput, 
-                    epochCount, 
-                    addConsoleText);
+                double[] output = CalculateImage(inputImage, imageData.W, imageData.H);
 
-                //addConsoleText($"END Image");
+                imageData.ErrorRate = CalculateErrorRate(output, expectedOutput);
+
+                newAvgErrorRate += imageData.ErrorRate;
             }
 
+            newAvgErrorRate /= ImageData.Count;
+
+            SaveErrorRatesToCSV(newAvgErrorRate);
+
+            if (newAvgErrorRate < AvgErrorRate)
+            {
+                addConsoleText($"IMPROVEMENT!!! {newAvgErrorRate} (-{(AvgErrorRate - newAvgErrorRate)})");
+
+                SaveImageMetadata(); // Save updated metadata
+                CalcAvgErrorRate(addConsoleText);
+                SaveModel();
+
+                Version++;
+                addConsoleText("New model version: v." + Version.ToString());
+            }
+            else
+            {
+                addConsoleText($"No improvement... ({newAvgErrorRate})");
+                LoadModel();
+                LoadImageData();
+            }
+
+            var endTime = DateTime.Now;
+            TotalTrainingTime += (endTime - startTime).TotalSeconds;
             SaveModel();
-            version++;
         }
 
-        public double[] PreprocessImage(Bitmap image, Action<string> addConsoleText)
+        public double[] PreprocessImage(Bitmap image, Action<string> addConsoleText = null)
         {
             double[] inputs = new double[image.Width * image.Height * 4];
-            for (int i = 0; i < image.Width * image.Height; i += 4)
+            for (int i = 0; i < image.Width; i++)
             {
-                //addConsoleText($"Pixel {i} / {image.Width * image.Height}");
-
-                inputs[i] = image.GetPixel(i % image.Width, i / image.Width).R;
-                inputs[i + 1] = image.GetPixel(i % image.Width, i / image.Width).G;
-                inputs[i + 2] = image.GetPixel(i % image.Width, i / image.Width).B;
-                inputs[i + 3] = image.GetPixel(i % image.Width, i / image.Width).A;
+                for (int j = 0; j < image.Height; j++)
+                {
+                    Color pixel = image.GetPixel(i, j);
+                    int index = (i * image.Height + j) * Constants.RGBA;
+                    inputs[index] = pixel.R / 255.0;
+                    inputs[index + 1] = pixel.G / 255.0;
+                    inputs[index + 2] = pixel.B / 255.0;
+                    // inputs[index + 3] = pixel.A; // JEZELI RGBA == 4 ODKOMENTOWAC
+                }
             }
-            addConsoleText($"Image preprocessed");
-            return inputs;
-        }
-        public double[] PreprocessImage(Bitmap image)
-        {
-            double[] inputs = new double[image.Width * image.Height * 4];
-            for (int i = 0; i < image.Width * image.Height; i += 4)
-            {
-                //addConsoleText($"Pixel {i} / {image.Width * image.Height}");
-
-                inputs[i] = image.GetPixel(i % image.Width, i / image.Width).R;
-                inputs[i + 1] = image.GetPixel(i % image.Width, i / image.Width).G;
-                inputs[i + 2] = image.GetPixel(i % image.Width, i / image.Width).B;
-                inputs[i + 3] = image.GetPixel(i % image.Width, i / image.Width).A;
-            }
+            // if (addConsoleText != null) addConsoleText("Image preprocessed");
             return inputs;
         }
 
@@ -373,7 +497,7 @@ namespace SOI
                 }
             }
             // save the expected output to desktop
-            /*
+
             {
                 Bitmap outputImage = new Bitmap(imageData.W, imageData.H);
                 for (int i = 0; i < imageData.H; i++)
@@ -384,56 +508,34 @@ namespace SOI
                         outputImage.SetPixel(j, i, Color.FromArgb(v, v, v));
                     }
                 }
-                outputImage.Save(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop)+"/SOI_expected_outputs/", imageData.FileName + "_expected.png"));
+                outputImage.Save(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/SOI_expected_outputs/", imageData.FileName + "_expected.png"));
             }
-            */
+
 
             return output;
         }
 
-
-        private void Evolve(double[] image, double[] expectedOutput, int epochCount, Action<string> addConsoleText)
+        private void CalcAvgErrorRate(Action<string> addConsoleText)
         {
-            Random rand = new Random();
-
-            double[] output = CalculateImage(image);
-
-            double currentErrorRate = CalculateErrorRate(output, expectedOutput);
-
-            for (int epoch = 0; epoch < epochCount; epoch++)
+            /*if(addConsoleText != null)
+                addConsoleText($"Before {AvgErrorRate} ( old: {PreviousAvgErrorRate} )");
+*/
+            double sum = 0.0;
+            foreach (var imageData in ImageData)
             {
-                //addConsoleText($"START epoch {epoch} / {epochCount}");
-                for (int i = 0; i < Layers.Length; i++)
-                {
-                    Parallel.ForEach(Layers[i].Neurons, neuron =>
-                    {
-                        for (int k = 0; k < neuron.Weights.Length; k++)
-                        {
-                            if (rand.NextDouble() < MutationRate)
-                            {
-                                neuron.Weights[k] += (rand.NextDouble() * 2 - 1) * LearningRate;
-                            }
-                        }
-                    });
-
-                }
-
-                double[] newOutput = CalculateImage(image, addConsoleText);
-                double newErrorRate = CalculateErrorRate(newOutput, expectedOutput);
-
-                if (newErrorRate < currentErrorRate)
-                {
-                    addConsoleText($"IMPROVEMENT!!! {errorRate} <= new: {newErrorRate} | improvement: -{currentErrorRate - newErrorRate}");
-
-                    upDateErrorRate(newErrorRate);
-                    SaveModel();
-                }
-                else
-                {
-                    addConsoleText($"No improvement");
-                    LoadModel();
-                }
+                sum += imageData.ErrorRate;
             }
+            PreviousAvgErrorRate = (double)AvgErrorRate;
+            AvgErrorRate = sum / ImageData.Count;
+
+           /* if (addConsoleText != null)
+                addConsoleText($"Now {AvgErrorRate} ( old: {PreviousAvgErrorRate} )");*/
+        }
+
+        public void SaveImageMetadata()
+        {
+            string json = JsonConvert.SerializeObject(ImageData, Formatting.Indented);
+            File.WriteAllText(DataFilePath, json); // Save to data.json
         }
 
         private double CalculateErrorRate(double[] outputs, double[] expectedOutputs)
@@ -445,130 +547,138 @@ namespace SOI
             }
             return sum / outputs.Length;
         }
-        public void upDateErrorRate(double newErrorRate)
-        {
-            previousErrorRate = errorRate;
-            errorRate = newErrorRate;
-            return;
-        }
-
         public double[] Use(Bitmap inputImage, Action<string> addConsoleText)
         {
-
             return CalculateImage(
-                PreprocessImage(inputImage, addConsoleText), 
+                PreprocessImage(inputImage, addConsoleText),
+                inputImage.Width,
+                inputImage.Height,
                 addConsoleText);
         }
 
-        private double[] CalculateImage(double[] input) // input is 4 times longer than the image
+
+        /*        {
+                    //addConsoleText($"CalculateImage()");
+                    double[] output = new double[input.Length / 4];
+                    for (int i = 0; i<output.Length; i++)
+                    {
+                        output[i] = 0;
+                    }
+                    addConsoleText($"Calculate Image: output prepared");
+                    int windowCount = input.Length / Constants.FrameSize * 2 - 1;
+                    int currentWindow = 1;
+                    for (int i = 0; i <= input.Length - Constants.FrameSize; i += Constants.FrameSize / 2)
+                    {
+                        //addConsoleText($"START Window {currentWindow++} / {windowCount} \t Pixels from {i} to {i + Constants.FrameSize}");
+                        double[] window = new double[Constants.FrameSize * 4];
+                        for (int j = 0; j<Constants.FrameSize; j++)
+                        {
+                            //addConsoleText($"Pixels {i+j*4} - {i+j*4+3}");
+                            int baseIndex = i + j * 4;
+                            if (baseIndex + 3 < input.Length)
+                            {
+                                window[j * 4] = input[baseIndex];
+                                window[j * 4 + 1] = input[baseIndex + 1];
+                                window[j * 4 + 2] = input[baseIndex + 2];
+                                window[j * 4 + 3] = input[baseIndex + 3];
+                            }
+                        }
+                        //addConsoleText($"START Neurons");
+                        double[] part = ActivateWindow(window, addConsoleText);
+        //addConsoleText($"END Neurons");
+        for (int j = 0; j < Constants.FrameSize; j++)
         {
-            //addConsoleText($"CalculateImage()");
-            double[] output = new double[input.Length / 4];
+            int outIndex = i + j;
+            if (outIndex < output.Length)
+            {
+                output[outIndex] += part[j];
+            }
+        }
+                        //addConsoleText($"END Window");
+                    }
+                    // stabilize the output
+                    for (int i = Constants.FrameSize / 2; i < output.Length - Constants.FrameSize / 2; i++)
+        {
+            output[i] /= 2;
+        }
+
+        return output;
+                }*/
+
+        private double[] CalculateImage(double[] input, int Width, int Height, Action<string> addConsoleText = null)
+        {
+            double[] output = new double[Width * Height];
+            double[] weight = new double[output.Length];  
+
             for (int i = 0; i < output.Length; i++)
             {
                 output[i] = 0;
-            }
-            //addConsoleText($"Calculate Image: output prepared");
-            int windowCount = input.Length / Constants.FrameSize * 2 - 1;
-            int currentWindow = 1;
-            for (int i = 0; i <= input.Length - Constants.FrameSize; i += Constants.FrameSize / 2)
-            {
-                //addConsoleText($"START Window {currentWindow++} / {windowCount} \t Pixels from {i} to {i + Constants.FrameSize}");
-                double[] window = new double[Constants.FrameSize * 4];
-                for (int j = 0; j < Constants.FrameSize; j++)
-                {
-                    //addConsoleText($"Pixels {i+j*4} - {i+j*4+3}");
-                    int baseIndex = i + j * 4;
-                    if (baseIndex + 3 < input.Length)
-                    {
-                        window[j * 4] = input[baseIndex];
-                        window[j * 4 + 1] = input[baseIndex + 1];
-                        window[j * 4 + 2] = input[baseIndex + 2];
-                        window[j * 4 + 3] = input[baseIndex + 3];
-                    }
-                }
-                //addConsoleText($"START Neurons");
-                double[] part = ActivateWindow(window);
-                //addConsoleText($"END Neurons");
-                for (int j = 0; j < Constants.FrameSize; j++)
-                {
-                    int outIndex = i + j;
-                    if (outIndex < output.Length)
-                    {
-                        output[outIndex] += part[j];
-                    }
-                }
-                //addConsoleText($"END Window");
-            }
-            // stabilize the output
-            for (int i = Constants.FrameSize / 2; i < output.Length - Constants.FrameSize / 2; i++)
-            {
-                output[i] /= 2;
+                weight[i] = 0;
             }
 
-            return output;
-        }
+            for (int ix = 0; ix <= Width - Constants.FrameSize; ix += Constants.FrameSize / 2)
+            {
+                for (int yi = 0; yi <= Height - Constants.FrameSize; yi += Constants.FrameSize / 2)
+                {
+                    double[] window = new double[Constants.FrameSize * Constants.FrameSize * Constants.RGBA];
 
-        private double[] CalculateImage(double[] input, Action<string> addConsoleText) // input is 4 times longer than the image
-        {
-            //addConsoleText($"CalculateImage()");
-            double[] output = new double[input.Length / 4];
+                    for (int x = 0; x < Constants.FrameSize; x++)
+                    {
+                        for (int y = 0; y < Constants.FrameSize; y++)
+                        {
+                            int baseIndex = ((ix + x) * Height + (yi + y)) * 3;
+                            if (baseIndex + 2 < input.Length)
+                            {
+                                window[(x * Constants.FrameSize + y) * 3] = input[baseIndex];
+                                window[(x * Constants.FrameSize + y) * 3 + 1] = input[baseIndex + 1];
+                                window[(x * Constants.FrameSize + y) * 3 + 2] = input[baseIndex + 2];
+                                // window[(x * Constants.FrameSize + y) * 4 + 3] = input[baseIndex + 3]; // <= if RGBA == 4 uncomment
+                            }
+                        }
+                    }
+
+                    double[] part = ActivateWindow(window);
+
+                    for (int x = 0; x < Constants.FrameSize; x++)
+                    {
+                        for (int y = 0; y < Constants.FrameSize; y++)
+                        {
+                            int outIndex = (ix + x) * Height + (yi + y);
+                            if (outIndex < output.Length)
+                            {
+                                output[outIndex] += part[x * Constants.FrameSize + y];
+                                weight[outIndex] += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            /*
+
+            122222221
+            244444442
+            244444442
+            244444442
+            122222221
+
+             */
+
             for (int i = 0; i < output.Length; i++)
             {
-                output[i] = 0;
-            }
-            //addConsoleText($"Calculate Image: output prepared");
-            int windowCount = input.Length / Constants.FrameSize * 2 - 1;
-            int currentWindow = 1;
-            for (int i = 0; i <= input.Length - Constants.FrameSize; i += Constants.FrameSize / 2)
-            {
-                //addConsoleText($"START Window {currentWindow++} / {windowCount} \t Pixels from {i} to {i + Constants.FrameSize}");
-                double[] window = new double[Constants.FrameSize * 4];
-                for (int j = 0; j < Constants.FrameSize; j++)
+                if (weight[i] > 0)  // Avoid division by zero
                 {
-                    //addConsoleText($"Pixels {i+j*4} - {i+j*4+3}");
-                    int baseIndex = i + j * 4;
-                    if (baseIndex + 3 < input.Length)
-                    {
-                        window[j * 4] = input[baseIndex];
-                        window[j * 4 + 1] = input[baseIndex + 1];
-                        window[j * 4 + 2] = input[baseIndex + 2];
-                        window[j * 4 + 3] = input[baseIndex + 3];
-                    }
+                    output[i] /= weight[i];
                 }
-                //addConsoleText($"START Neurons");
-                double[] part = ActivateWindow(window, addConsoleText);
-                //addConsoleText($"END Neurons");
-                for (int j = 0; j < Constants.FrameSize; j++)
-                {
-                    int outIndex = i + j;
-                    if (outIndex < output.Length)
-                    {
-                        output[outIndex] += part[j];
-                    }
-                }
-                //addConsoleText($"END Window");
-            }
-            // stabilize the output
-            for (int i = Constants.FrameSize / 2; i < output.Length - Constants.FrameSize / 2; i++)
-            {
-                output[i] /= 2;
             }
 
             return output;
         }
 
-        private double[] ActivateWindow(double[] window)
-        {
-            double[] output = Layers[0].Activate(window);
-            for (int i = 1; i < Layers.Length; i++)
-            {
-                output = Layers[i].Activate(output);
-            }
-            return output;
-        }
 
-        private double[] ActivateWindow(double[] window, Action<string> addConsoleText)
+
+
+        private double[] ActivateWindow(double[] window, Action<string> addConsoleText = null)
         {
             //double[][] outputs = new double[Constants.LayerCount][];
             //addConsoleText($"Layer 0, inputting {window.Length} into {Layers[0].Neurons[0].Weights.Length}");
@@ -602,5 +712,60 @@ namespace SOI
 
             return 0;
         }
+
+        public void reset()
+        {
+            PreviousAvgErrorRate = 1.0;
+            AvgErrorRate = 0.0;
+
+            foreach (var imageData in ImageData)
+            {
+
+                double[] inputImage = PreprocessImage(LoadImage(imageData.FileName));
+                double[] expectedOutput = CalculateExpectedOutputs(imageData, null);
+
+                double[] output = CalculateImage(inputImage, imageData.W, imageData.H);
+
+                imageData.ErrorRate = CalculateErrorRate(output, expectedOutput);
+
+                AvgErrorRate += imageData.ErrorRate;
+            }
+
+            AvgErrorRate /= ImageData.Count;
+
+            SaveImageMetadata();
+            SaveModel();
+        }
+        public void SaveErrorRatesToCSV(double tryErrorRate)
+        {
+            try
+            {
+                var csvLines = new List<string>();
+                if (!File.Exists(CSVFilePath))
+                {
+                    csvLines.Add("Timestamp, Best Error Rate, Try Error Rate");
+                }
+
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                if (AvgErrorRate < tryErrorRate)
+                    csvLines.Add($"{timestamp},{AvgErrorRate},{tryErrorRate}");
+                else
+                    csvLines.Add($"{timestamp},{tryErrorRate},{tryErrorRate}");
+
+/*                foreach (var imageData in ImageData)
+                {
+                    csvLines.Add($"{timestamp},{AvgErrorRate},{imageData.FileName},{imageData.ErrorRate}");
+                }*/
+
+                File.AppendAllLines(CSVFilePath, csvLines);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving error rates to CSV: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
     }
 }

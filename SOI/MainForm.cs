@@ -30,12 +30,10 @@ namespace SOI
         {
             InitializeComponent();
 
+            updateUI(null, null);
 
             // Initialize points with an array of 4 elements
             points = new Points(4);
-            outputImgCount.Text = model.imgCount().ToString();
-
-            outputV.Text = "v." + model.version.ToString();
 
             backgroundWorker = new BackgroundWorker();
             backgroundWorker.WorkerSupportsCancellation = true;
@@ -143,10 +141,11 @@ namespace SOI
             {
                 for (int j = 0; j < W; j++)
                 {
-                    matrix[i, j] = input[i * W + j] - 0.95; // <========================================== TUTAJ
+                    matrix[i, j] = input[i * W + j] - 0.95; // Adjusting values based on a threshold
                 }
             }
 
+            // Step 2: Compute the prefix sum for efficient sum calculation
             double[,] prefixSum = new double[H + 1, W + 1];
             for (int i = 1; i <= H; i++)
             {
@@ -159,12 +158,16 @@ namespace SOI
                 }
             }
 
-            // Step 3: Find the best square
+            // Step 3: Define the minimum square size (10% of the minimum dimension)
+            int minDimension = Math.Min(W, H);
+            int minSquareSize = (int)(minDimension * 0.1);
+
+            // Step 4: Find the best square, starting from max possible size and down to minSquareSize
             double maxSum = double.NegativeInfinity;
             CustomPoint bestCenter = new CustomPoint(0, 0);
             int bestSize = 0;
 
-            for (int size = Math.Min(W, H); size >= 1; size--)
+            for (int size = Math.Min(W, H); size >= minSquareSize; size--)  // Start from largest and go down to minSquareSize
             {
                 for (int i = size; i <= H; i++)
                 {
@@ -185,12 +188,13 @@ namespace SOI
                 }
             }
 
-            Points resoult = new Points(4);
-            resoult.c = bestCenter;
-            resoult.a = bestSize;
-            resoult.pointsfromCenter();
+            // Step 5: Construct the result with the best found center and size
+            Points result = new Points(4);
+            result.c = bestCenter;
+            result.a = bestSize;
+            result.pointsfromCenter();
 
-            return resoult;
+            return result;
         }
 
         private Points AI(Bitmap inputImage)
@@ -238,18 +242,23 @@ namespace SOI
         private void ProcessImage(Bitmap inputImage)
         {
             points = AI(inputImage);
-
             using (Graphics g = Graphics.FromImage(inputImage))
             {
                 Color semiTransparentBlack = Color.FromArgb(128, 0, 0, 0);
                 using (Brush semiTransparentBrush = new SolidBrush(semiTransparentBlack))
                 {
-                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, 0, inputImage.Width, points.points[0].y));
-                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, points.points[2].y, inputImage.Width, inputImage.Height - points.points[3].y));
-                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, points.points[0].y, points.points[0].x, points.a));
-                    g.FillRectangle(semiTransparentBrush, new Rectangle(points.points[1].x, points.points[1].y, inputImage.Width - points.points[1].x, points.a));
+                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, 0, inputImage.Width, points.points[0].y)); // Top
+                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, points.points[2].y, inputImage.Width, inputImage.Height - points.points[2].y)); // Bottom
+                    g.FillRectangle(semiTransparentBrush, new Rectangle(0, points.points[0].y, points.points[0].x, points.points[2].y - points.points[0].y)); // Left
+                    g.FillRectangle(semiTransparentBrush, new Rectangle(points.points[1].x, points.points[1].y, inputImage.Width - points.points[1].x, points.points[2].y - points.points[1].y)); // Right
+                }
+
+                using (Pen framePen = new Pen(Color.FromArgb(0x00, 0xaa, 0xff), 1))
+                {
+                    g.DrawRectangle(framePen, new Rectangle(points.points[0].x, points.points[0].y, points.points[1].x - points.points[0].x, points.points[2].y - points.points[0].y));
                 }
             }
+
             inputImageBox.Image = inputImage;
 
             this.Invoke((MethodInvoker)delegate
@@ -296,6 +305,31 @@ namespace SOI
                 buttonShowPixelImportancy.Text = "Show Cropped Image";
             }
             showResult();
+        }
+        private string secondsToTime(double s)
+        {
+            string time = "";
+            int hours = (int)(s / 3600);
+            int minutes = (int)((s - hours * 3600) / 60);
+            int seconds = (int)(s - hours * 3600 - minutes * 60);
+            time = hours.ToString() + ":" + minutes.ToString("00") + ":" + seconds.ToString("00") + (s - (int)s).ToString("F4").Substring(1);
+            return time;
+        }
+        private void updateUI()
+        {
+            outputImgCount.Text = model.imgCount().ToString();
+            outputTrainingTime.Text = secondsToTime( model.TotalTrainingTime );
+            outputV.Text = "v." + model.Version.ToString();
+        }
+
+        private void updateUI(object sender, EventArgs e)
+        {
+            updateUI();
+        }
+
+        private void updateUI(object sender, MouseEventArgs e)
+        {
+            updateUI();
         }
     }
 }

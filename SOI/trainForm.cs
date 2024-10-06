@@ -17,9 +17,12 @@ namespace SOI
         bool training = false;
         BackgroundWorker backgroundWorker;
 
-        int epochCount = 0;
         double LearningRate = 0.1;
         double MutationFactor = 0.1;
+
+        bool randomMutationFactor = false;
+        bool randomLearningRate = false;
+
 
         public trainForm(ref Model model)
         {
@@ -30,20 +33,31 @@ namespace SOI
             backgroundWorker.WorkerSupportsCancellation = true;
             backgroundWorker.DoWork += new DoWorkEventHandler(BackgroundWorker_DoWork);
 
-            outputV.Text = "v." + model.version.ToString();
+            outputV.Text = "v." + model.Version.ToString();
+            double change = model.PreviousAvgErrorRate - model.AvgErrorRate;
+            outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (-" + change.ToString("F8") + ")";
+            outputLearningTime.Text = secondsToTime(model.TotalTrainingTime);
 
             outputImgCount.Text = model.imgCount().ToString();
 
             /*            outputErrorRate.Text = model.ErrorRate().ToString();*/
 
-
-            epochCountTrackValueChange(null, null);
             learningRateTrackValueChange(null, null);
             mutationFactorTrackValueChange(null, null);
         }
         private void trainForm_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private string secondsToTime(double s)
+        {
+            string time = "";
+            int hours = (int)(s / 3600);
+            int minutes = (int)((s - hours * 3600) / 60);
+            int seconds = (int)(s - hours * 3600 - minutes * 60);
+            time = hours.ToString() + ":" + minutes.ToString("00") + ":" + seconds.ToString("00") + (s - (int)s).ToString("F4").Substring(1);
+            return time;
         }
 
         private void addConsoleText(string text)
@@ -64,7 +78,6 @@ namespace SOI
             {
                 training = true;
                 backgroundWorker.RunWorkerAsync();
-                addConsoleText("Training started");
             }
             else
             {
@@ -73,15 +86,18 @@ namespace SOI
 
             if (outputV.InvokeRequired)
             {
-                outputV.Invoke(new Action(() => outputV.Text = "v." + model.version.ToString()));
-                outputErrorRate.Invoke(new Action(() => outputErrorRate.Text = model.errorRate.ToString()));
-                outputErrorRateChange.Invoke(new Action(() => outputErrorRateChange.Text = (model.previousErrorRate - model.errorRate).ToString()));
+                outputV.Invoke(new Action(() => outputV.Text = "v." + model.Version.ToString()));
+                outputErrorRate.Invoke(new Action(() =>
+                    outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (" + (model.PreviousAvgErrorRate - model.AvgErrorRate).ToString("F8") + ")"
+                    ));
+                outputLearningTime.Invoke(new Action(() => outputLearningTime.Text = secondsToTime(model.TotalTrainingTime)));
             }
             else
             {
-                outputV.Text = "v." + model.version.ToString();
-                outputErrorRate.Text = model.errorRate.ToString();
-                outputErrorRateChange.Text = (model.previousErrorRate - model.errorRate).ToString();
+                outputV.Text = "v." + model.Version.ToString();
+                double change = model.PreviousAvgErrorRate - model.AvgErrorRate;
+                outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (-" + change.ToString("F8") + ")";
+                outputLearningTime.Text = secondsToTime(model.TotalTrainingTime);
             }
         }
 
@@ -96,17 +112,27 @@ namespace SOI
         {
             BackgroundWorker worker = sender as BackgroundWorker;
 
+            addConsoleText($"Training started with ErrorRate: {model.AvgErrorRate}");
+
             do
             {
-                model.Train(epochCount, MutationFactor, LearningRate, addConsoleText);
+                model.Train(MutationFactor, LearningRate, addConsoleText);
 
                 this.Invoke((MethodInvoker)delegate
                 {
-                    outputV.Text = "v." + model.version.ToString();
-                    outputErrorRate.Text = model.errorRate.ToString();
-                    outputErrorRateChange.Text = (model.previousErrorRate - model.errorRate).ToString();
+                    outputV.Text = "v." + model.Version.ToString();
+                    double change = model.PreviousAvgErrorRate - model.AvgErrorRate;
+                    outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (-" + change.ToString("F8") + ")";
+                    outputLearningTime.Text = secondsToTime(model.TotalTrainingTime);
 
-                    addConsoleText("New model version: v." + model.version.ToString());
+                    if(randomMutationFactor)
+                    {
+                        randomiseMutationFactor();
+                    }
+                    if (randomLearningRate)
+                    {
+                        randomiseLearningRate();
+                    }
                 });
 
                 if (worker.CancellationPending)
@@ -119,9 +145,10 @@ namespace SOI
 
             this.Invoke((MethodInvoker)delegate
             {
-                outputV.Text = "v." + model.version.ToString();
-                outputErrorRate.Text = model.errorRate.ToString();
-                outputErrorRateChange.Text = (model.previousErrorRate - model.errorRate).ToString();
+                outputV.Text = "v." + model.Version.ToString();
+                double change = model.PreviousAvgErrorRate - model.AvgErrorRate;
+                outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (-" + change.ToString("F8") + ")";
+                outputLearningTime.Text = secondsToTime(model.TotalTrainingTime);
 
                 //play sound
 
@@ -131,22 +158,63 @@ namespace SOI
             });
         }
 
-        private void epochCountTrackValueChange(object sender, EventArgs e)
+        private void learningRateTrackValueChange(object sender, EventArgs e)
         {
-            epochCount = epochCountTrackBar.Value;
-            outputEpochs.Text = epochCount.ToString();
+            changeLearningRate(trackBarLearningRate.Value);
         }
 
-        private void learningRateTrackValueChange(object sender, EventArgs e)
+        private void mutationFactorTrackValueChange(object sender, EventArgs e)
+        {
+            changeMutationFactor(trackBarMutationFactor.Value);
+        }
+
+        private void buttonResetClick(object sender, EventArgs e)
+        {
+            model.reset();
+
+            outputV.Text = "v." + model.Version.ToString();
+            double change = model.PreviousAvgErrorRate - model.AvgErrorRate;
+            outputErrorRate.Text = model.AvgErrorRate.ToString("F8") + " (-" + change.ToString("F8") + ")";
+            outputLearningTime.Text = secondsToTime(model.TotalTrainingTime);
+        }
+
+        private void changeMutationFactor(int mf)
+        {
+            MutationFactor = trackBarMutationFactor.Value / 10000.0;
+            outputMutationFactor.Text = MutationFactor.ToString();
+        }
+        private void changeLearningRate(int lr)
         {
             LearningRate = trackBarLearningRate.Value / 10000.0;
             outputLearningRate.Text = LearningRate.ToString();
         }
 
-        private void mutationFactorTrackValueChange(object sender, EventArgs e)
+        private void randomiseMutationFactor()
         {
-            MutationFactor = trackBarMutationFactor.Value / 10000.0;
-            outputMutationFactor.Text = MutationFactor.ToString();
+            trackBarMutationFactor.Value = (int)(CryptoRandom.GetMoreRandomDouble() * 10000);
+        }
+
+        private void randomiseLearningRate()
+        {
+            trackBarLearningRate.Value = (int)(CryptoRandom.GetMoreRandomDouble() * 10000);
+        }
+
+        private void ClickRandomMutationFactor(object sender, EventArgs e)
+        {
+            randomMutationFactor = !randomMutationFactor;
+            if(randomMutationFactor)
+            {
+                randomiseMutationFactor();
+            }
+        }
+
+        private void ClickRandomLearningRate(object sender, EventArgs e)
+        {
+            randomLearningRate = !randomLearningRate;
+            if (randomLearningRate)
+            {
+                randomiseLearningRate();
+            }
         }
     }
 }

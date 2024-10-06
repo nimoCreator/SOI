@@ -339,7 +339,9 @@ namespace SOI
                         W = originalImage.Width,
                         H = originalImage.Height,
                         c = new CustomPoint(points.c),
-                        a = points.a
+                        a = points.a,
+                        ErrorRate = 100.0
+
                     };
 
                     string metadataPath = Path.Combine(directoryPath, metadataFileName);
@@ -383,7 +385,8 @@ namespace SOI
             try
             {
                 Random random = new Random();
-                int size = random.Next(200, 1800); // Reasonable size for images
+                // int size = random.Next(200, 1800); // Reasonable size for images
+                int size = 64; // <============================================================================================================
 
                 List<string> imageApis = new List<string>
                 {
